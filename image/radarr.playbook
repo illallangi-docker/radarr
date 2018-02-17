@@ -1,0 +1,35 @@
+---
+- hosts: all
+  tasks:
+    - get_url:
+        url:        "https://github.com/Radarr/Radarr/releases/download/v{{ ansible_env.RADARR_VERSION }}/Radarr.develop.{{ ansible_env.RADARR_VERSION }}.linux.tar.gz"
+        dest:       "/usr/local/src/radarr-{{ ansible_env.RADARR_VERSION }}.tar.gz"
+        checksum:   "sha256:{{ ansible_env.RADARR_SHA256 }}"
+    - template:
+        src:    "mono-project.repo.j2"
+        dest:   "/etc/yum.repos.d/mono-project.repo"
+    - yum:
+        pkg:        "{{ item }}"
+        state:      "present"
+      with_items:
+        - mono-core
+        - mono-devel
+        - mono-locale-extras
+        - curl
+        - mediainfo
+#    - file:
+#        path:  "/usr/lib/libMonoPosixHelper.so"
+#        src:   "/usr/lib64/libMonoPosixHelper.so"
+#        state: "link"
+#        force: "yes"
+    - file:
+        path:  "/usr/lib/radarr-{{ ansible_env.RADARR_VERSION }}"
+        state: "directory"
+    - command: "tar --extract --gzip --file=/usr/local/src/radarr-{{ ansible_env.RADARR_VERSION }}.tar.gz --strip-components=1 --directory /usr/lib/radarr-{{ ansible_env.RADARR_VERSION }}"
+      args:
+        creates: "/usr/lib/radarr-{{ ansible_env.RADARR_VERSION }}/Radarr.exe"
+        warn:    "no"
+    - command: "{{ item }}"
+      with_items:
+        - "find /usr/lib/radarr-{{ ansible_env.RADARR_VERSION }} -type f -exec chmod 644 '{}' {{ '\' }};"
+        - "find /usr/lib/radarr-{{ ansible_env.RADARR_VERSION }} -type d -exec chmod 755 '{}' {{ '\' }};"
